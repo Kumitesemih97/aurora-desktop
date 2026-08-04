@@ -1,6 +1,6 @@
 # ✨ Aurora Desktop Assistant
 
-Aurora is a lightweight, cross-platform AI desktop assistant built with **Tauri v2**, **React 18**, **TypeScript**, and **Tailwind CSS**. Powered by local **Ollama** models (defaulting to `gemma4:31b-cloud`) and designed with support for the Model Context Protocol (MCP), Aurora delivers native workstation AI capabilities with an extremely small footprint (~30–50 MB RAM).
+Aurora is a lightweight, cross-platform AI desktop assistant built with **Tauri v2**, **React 18**, **TypeScript**, and **Tailwind CSS**. Powered by local **Ollama** models (defaulting to `gemma4:31b-cloud`) and designed with support for the Model Context Protocol (MCP), Aurora delivers native workstation AI capabilities with an extremely small memory footprint (~30–50 MB RAM).
 
 ---
 
@@ -17,14 +17,14 @@ Aurora is a lightweight, cross-platform AI desktop assistant built with **Tauri 
 
 ## 📋 Prerequisites
 
-Before setting up Aurora, ensure you have the following installed:
+Ensure you have the following installed on your machine before setup:
 
 1. **[Node.js](https://nodejs.org/)** (v18 or higher) and `npm`.
-2. **[Rust Toolchain](https://rustup.rs/)** (`rustc` and `cargo`).
-3. **[Ollama](https://ollama.com/)** installed and running locally.
-4. **Platform-Specific Dependencies**:
+2. **[Ollama](https://ollama.com/)** installed and running locally.
+3. **Rust Toolchain** (`rustc` and `cargo`).
+4. **Platform Build Tools**:
 * **macOS**: Xcode Command Line Tools (`xcode-select --install`).
-* **Windows**: [Microsoft C++ Build Tools](https://www.google.com/search?q=https://visualstudio.microsoft.com/visual-cpp-build-tools/) and WebView2 runtime (preinstalled on Windows 10/11).
+* **Windows**: [Microsoft C++ Build Tools](https://www.google.com/search?q=https://visualstudio.microsoft.com/visual-cpp-build-tools/) and WebView2 runtime.
 * **Linux**: Required packages (`webkit2gtk-4.1`, `build-essential`, `curl`, `wget`, `libssl-dev`, `libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev`).
 
 
@@ -33,7 +33,24 @@ Before setting up Aurora, ensure you have the following installed:
 
 ## 🛠️ Installation & Setup
 
-### 1. Pull the Target Model
+### 1. Install Rust Toolchain
+
+If Rust and Cargo are not already installed, install them using `rustup` and load the environment into your current terminal:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+source "$HOME/.cargo/env"
+
+```
+
+Verify the installation:
+
+```bash
+cargo --version
+
+```
+
+### 2. Pull the Ollama Model
 
 Ensure Ollama is running in the background, then pull the required model:
 
@@ -42,18 +59,40 @@ ollama pull gemma4:31b-cloud
 
 ```
 
-### 2. Install Project Dependencies
+### 3. Install Node Dependencies
 
-Clone or open the project folder in your terminal and run:
+Navigate to your project root folder and run:
 
 ```bash
 npm install
 
 ```
 
-### 3. Start Development Server
+### 4. Generate Application Icons
 
-Run the application in development mode with instant hot-reloading:
+Tauri requires asset icons inside `src-tauri/icons/` to build the app package. Generate placeholder icons with the following commands:
+
+**macOS:**
+
+```bash
+mkdir -p src-tauri/icons
+sips -s format png /System/Library/CoreServices/CoreTypes.bundle/Contents/Resources/GenericApplicationIcon.icns --out base-icon.png
+npx tauri icon base-icon.png
+rm base-icon.png
+
+```
+
+**Windows / Linux:**
+Place a 1024x1024 PNG named `app-icon.png` in the project root, then run:
+
+```bash
+npx tauri icon app-icon.png
+
+```
+
+### 5. Launch Development Server
+
+Start the application with instant hot-reloading:
 
 ```bash
 npm run tauri dev
@@ -71,7 +110,7 @@ npm run tauri build
 
 ```
 
-Bundled binaries will be generated inside `src-tauri/target/release/bundle/`.
+Bundled binaries will be output inside `src-tauri/target/release/bundle/`.
 
 ---
 
@@ -85,21 +124,23 @@ aurora-desktop/
 ├── tailwind.config.js
 ├── tsconfig.json
 ├── src-tauri/
-│   ├── Cargo.toml
-│   ├── tauri.conf.json
+│   ├── build.rs             # Tauri build script
+│   ├── Cargo.toml           # Rust dependencies & build settings
+│   ├── tauri.conf.json      # Window metadata & security policies
+│   ├── icons/               # Platform app icons
 │   └── src/
 │       └── main.rs          # Native Rust entry point
 └── src/
-    ├── main.tsx            # React app mount point
-    ├── App.tsx             # Root component & state management
-    ├── index.css           # Global Tailwind directives & scrollbar styles
-    ├── types.ts            # Data models & interface contracts
-    ├── translations.ts     # Localization dictionaries & OS locale detector
+    ├── main.tsx             # React app mount point
+    ├── App.tsx              # Root component & state management
+    ├── index.css            # Global Tailwind directives & scrollbar styles
+    ├── types.ts             # Data models & interface contracts
+    ├── translations.ts      # Localization dictionaries & OS locale detector
     ├── components/
-    │   ├── Sidebar.tsx      # macOS navigation sidebar
-    │   ├── ChatCanvas.tsx   # Message stream & prompt input
-    │   └── SettingsView.tsx # MCP & system prompt preferences
+    │   ├── Sidebar.tsx       # macOS navigation sidebar
+    │   ├── ChatCanvas.tsx    # Message stream & prompt input
+    │   └── SettingsView.tsx  # MCP & system prompt preferences
     └── services/
-        └── ollama.ts       # Async Ollama API client
+        └── ollama.ts        # Async Ollama API client
 
 ```
