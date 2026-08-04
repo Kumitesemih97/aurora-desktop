@@ -53,7 +53,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* Tab Switcher */}
         <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl mb-4">
           <button
             onClick={() => setActiveTab("chat")}
@@ -73,7 +72,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
-        {/* New Chat Button */}
         <button
           onClick={createNewChat}
           className="w-full py-2 px-3 mb-4 rounded-xl border border-blue-500 text-blue-500 font-medium text-sm flex items-center justify-center gap-2 hover:bg-blue-500/10 transition"
@@ -81,7 +79,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Plus className="w-4 h-4" /> {t("new_chat")}
         </button>
 
-        {/* Recent Chats */}
         <div className="text-xs font-semibold opacity-50 uppercase tracking-wider mb-2 px-1">
           {t("recent_chats")}
         </div>
@@ -117,7 +114,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* Language Controls */}
       <div className="p-4 border-t border-black/5 dark:border-white/5 space-y-2">
         <label className="text-xs opacity-60 block">{t("language_select")}</label>
         <select
