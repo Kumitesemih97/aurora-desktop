@@ -29,12 +29,16 @@ export const ChatCanvas: React.FC<ChatCanvasProps> = ({
 
   return (
     <div className="flex-1 flex flex-col justify-between p-6 h-full relative">
+      {/* Invisible Top Drag Bar */}
+      <div data-tauri-drag-region className="h-8 w-full shrink-0 select-none cursor-default" />
+
+      {/* Message Stream */}
       <div className="flex-1 overflow-y-auto space-y-4 pr-2">
         {session.messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center opacity-80">
-            <Sparkles className="w-12 h-12 text-sky-400 mb-3 animate-pulse" />
-            <h2 className="text-3xl font-bold mb-1">{t("greeting_hello")}</h2>
-            <p className="text-base opacity-60 mb-6">{t("greeting_sub")}</p>
+          <div data-tauri-drag-region className="flex flex-col items-center justify-center h-full text-center opacity-80">
+            <Sparkles className="w-12 h-12 text-sky-400 mb-3 animate-pulse pointer-events-none" />
+            <h2 data-tauri-drag-region className="text-3xl font-bold mb-1">{t("greeting_hello")}</h2>
+            <p data-tauri-drag-region className="text-base opacity-60 mb-6">{t("greeting_sub")}</p>
             <div className="flex flex-wrap gap-2 justify-center">
               {[t("chip_1"), t("chip_2"), t("chip_3")].map((chip, idx) => (
                 <button
@@ -90,6 +94,7 @@ export const ChatCanvas: React.FC<ChatCanvasProps> = ({
         <div ref={chatEndRef} />
       </div>
 
+      {/* Floating Prompt Input Bar */}
       <div className="mt-4 relative">
         <input
           type="text"
