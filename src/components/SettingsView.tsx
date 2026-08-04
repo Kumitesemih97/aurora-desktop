@@ -48,7 +48,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
     <div className="max-w-2xl mx-auto w-full space-y-6 p-6 overflow-y-auto h-full">
       <h2 className="text-2xl font-bold">{t("preferences")}</h2>
 
-      {/* System Prompt */}
       <div className={`p-4 rounded-2xl border ${darkMode ? "bg-[#2C2C2E] border-[#3A3A3C]" : "bg-white border-[#E5E5EA]"}`}>
         <h3 className="font-semibold mb-1 text-sm">{t("sys_prompt_title")}</h3>
         <p className="text-xs opacity-60 mb-3">{t("sys_prompt_desc")}</p>
@@ -70,7 +69,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
         </div>
       </div>
 
-      {/* Add MCP Server */}
       <div className={`p-4 rounded-2xl border ${darkMode ? "bg-[#2C2C2E] border-[#3A3A3C]" : "bg-white border-[#E5E5EA]"}`}>
         <h3 className="font-semibold mb-3 text-sm">{t("mcp_add_title")}</h3>
         <div className="flex gap-2 mb-3">
@@ -131,7 +129,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
         </div>
       </div>
 
-      {/* Configured MCP Servers List */}
       <div className={`p-4 rounded-2xl border ${darkMode ? "bg-[#2C2C2E] border-[#3A3A3C]" : "bg-white border-[#E5E5EA]"}`}>
         <h3 className="font-semibold mb-3 text-sm">{t("mcp_list_title")}</h3>
         {Object.keys(config.mcpServers).length === 0 ? (
