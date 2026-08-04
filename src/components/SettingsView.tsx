@@ -46,7 +46,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
 
   return (
     <div className="max-w-2xl mx-auto w-full space-y-6 p-6 overflow-y-auto h-full">
-      <h2 className="text-2xl font-bold">{t("preferences")}</h2>
+      {/* Top Drag Region Bar */}
+      <div data-tauri-drag-region className="h-6 w-full shrink-0 select-none cursor-default" />
+
+      <h2 data-tauri-drag-region className="text-2xl font-bold select-none">{t("preferences")}</h2>
 
       <div className={`p-4 rounded-2xl border ${darkMode ? "bg-[#2C2C2E] border-[#3A3A3C]" : "bg-white border-[#E5E5EA]"}`}>
         <h3 className="font-semibold mb-1 text-sm">{t("sys_prompt_title")}</h3>
