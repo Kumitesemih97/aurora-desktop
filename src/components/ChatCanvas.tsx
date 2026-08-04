@@ -28,12 +28,12 @@ export const ChatCanvas: React.FC<ChatCanvasProps> = ({
   }, [session.messages, isThinking]);
 
   return (
-    <div className="flex-1 flex flex-col justify-between p-6 h-full relative">
+    <div className="flex-1 flex flex-col justify-between p-6 h-full min-h-0 overflow-hidden relative">
       {/* Invisible Top Drag Bar */}
       <div data-tauri-drag-region className="h-8 w-full shrink-0 select-none cursor-default" />
 
-      {/* Message Stream */}
-      <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+      {/* Message Stream Container - Only scrolls when content exceeds height */}
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-4 pr-2">
         {session.messages.length === 0 ? (
           <div data-tauri-drag-region className="flex flex-col items-center justify-center h-full text-center opacity-80">
             <Sparkles className="w-12 h-12 text-sky-400 mb-3 animate-pulse pointer-events-none" />
@@ -94,8 +94,8 @@ export const ChatCanvas: React.FC<ChatCanvasProps> = ({
         <div ref={chatEndRef} />
       </div>
 
-      {/* Floating Prompt Input Bar */}
-      <div className="mt-4 relative">
+      {/* Floating Prompt Bar */}
+      <div className="mt-4 relative shrink-0">
         <input
           type="text"
           value={inputPrompt}
