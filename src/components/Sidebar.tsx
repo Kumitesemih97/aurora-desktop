@@ -38,10 +38,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         darkMode ? "bg-[#1C1C1E] border-[#2C2C2E]" : "bg-[#F2F2F7] border-[#E5E5EA]"
       }`}
     >
-      <div className="p-4 flex-1 flex flex-col min-h-0">
-        <div className="flex items-center justify-between mb-4 pt-4">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-sky-400" /> Aurora
+      {/* Top section: data-tauri-drag-region allows dragging from empty space */}
+      <div className="p-4 flex-1 flex flex-col min-h-0" data-tauri-drag-region>
+        {/* Header bar with padding for macOS traffic light buttons */}
+        <div
+          data-tauri-drag-region
+          className="flex items-center justify-between mb-4 pt-6 cursor-default select-none"
+        >
+          <h1 data-tauri-drag-region className="text-xl font-bold flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-sky-400 pointer-events-none" /> Aurora
           </h1>
           <button
             onClick={() => setDarkMode(!darkMode)}
@@ -53,6 +58,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
+        {/* Tab Switcher */}
         <div className="flex bg-black/5 dark:bg-white/5 p-1 rounded-xl mb-4">
           <button
             onClick={() => setActiveTab("chat")}
@@ -72,6 +78,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </button>
         </div>
 
+        {/* New Chat Button */}
         <button
           onClick={createNewChat}
           className="w-full py-2 px-3 mb-4 rounded-xl border border-blue-500 text-blue-500 font-medium text-sm flex items-center justify-center gap-2 hover:bg-blue-500/10 transition"
@@ -79,7 +86,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <Plus className="w-4 h-4" /> {t("new_chat")}
         </button>
 
-        <div className="text-xs font-semibold opacity-50 uppercase tracking-wider mb-2 px-1">
+        {/* Recent Chats */}
+        <div data-tauri-drag-region className="text-xs font-semibold opacity-50 uppercase tracking-wider mb-2 px-1">
           {t("recent_chats")}
         </div>
         <div className="flex-1 overflow-y-auto space-y-1">
