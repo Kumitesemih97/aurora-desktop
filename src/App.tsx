@@ -10,7 +10,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"chat" | "settings">("chat");
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const [language, setLanguage] = useState<string>(detectOSLanguage());
-  
+
   const [config, setConfig] = useState<AppConfig>({
     language: detectOSLanguage(),
     systemPrompt: DEFAULT_SYSTEM_PROMPTS[detectOSLanguage()],
@@ -24,7 +24,7 @@ export default function App() {
   ]);
   const [currentSessionId, setCurrentSessionId] = useState<string>("1");
 
-  const t = (key: str): string => {
+  const t = (key: string): string => {
     return TRANSLATIONS[language]?.[key] || TRANSLATIONS["en"]?.[key] || key;
   };
 
