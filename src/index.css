@@ -5,20 +5,31 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+  margin: 0;
+  padding: 0;
 }
 
-/* Custom minimal macOS scrollbar */
+/* Auto-hiding, floating overlay scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
+
 ::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: rgba(150, 150, 150, 0.3);
-  border-radius: 3px;
+  background: transparent;
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
 }
+
+/* Show scrollbar thumb only when hovering over scrollable areas */
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(150, 150, 150, 0.3);
+}
+
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(150, 150, 150, 0.5);
+  background: rgba(150, 150, 150, 0.6) !important;
 }
