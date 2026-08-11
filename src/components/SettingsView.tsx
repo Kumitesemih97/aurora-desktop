@@ -123,7 +123,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
           />
           <input
             type="text"
-            placeholder={serverType === "sse" ? t("sse_url") : t("command")}
+            placeholder={serverType === "sse" ? t("sse_url") : `${t("command")} (e.g. npx, node, python)`}
             value={cmdUrl}
             onChange={(e) => setCmdUrl(e.target.value)}
             className={`w-full p-2.5 text-xs rounded-lg outline-none border ${
@@ -133,7 +133,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
           {serverType === "stdio" && (
             <input
               type="text"
-              placeholder={t("arguments")}
+              placeholder={`${t("arguments")} (e.g. @modelcontextprotocol/server-everything)`}
               value={argsStr}
               onChange={(e) => setArgsStr(e.target.value)}
               className={`w-full p-2.5 text-xs rounded-lg outline-none border ${
