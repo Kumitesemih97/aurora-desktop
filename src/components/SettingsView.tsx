@@ -56,10 +56,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
         case "Disconnected": return { icon: "⚪", label: "Disconnected" };
         default: return { icon: "⚪", label: "Unknown" };
       }
-    } else if (status && typeof status === "object" && "status" in status) {
-      if (status.status === "Error") {
-        return { icon: "🔴", label: `Error: ${status.message}` };
-      }
+    } else if (status && typeof status === "object" && "Error" in status) {
+      return { icon: "🔴", label: `Error: ${status.Error}` };
     }
     return { icon: "⚪", label: "Disconnected" };
   };
