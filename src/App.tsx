@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { Sidebar } from "./components/Sidebar";
 import { ChatCanvas } from "./components/ChatCanvas";
 import { SettingsView } from "./components/SettingsView";
@@ -11,11 +12,25 @@ export default function App() {
   const [darkMode, setDarkMode] = useState<boolean>(true);
   const [language, setLanguage] = useState<string>(detectOSLanguage());
 
-  const [config, setConfig] = useState<AppConfig>({
-    language: detectOSLanguage(),
-    systemPrompt: DEFAULT_SYSTEM_PROMPTS[detectOSLanguage()],
-    mcpServers: {},
+  const [config, setConfig] = useState<AppConfig>(() => {
+    const saved = localStorage.getItem("aurora-config");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved config", e);
+      }
+    }
+    return {
+      language: detectOSLanguage(),
+      systemPrompt: DEFAULT_SYSTEM_PROMPTS[detectOSLanguage()],
+      mcpServers: {},
+    };
   });
+
+  React.useEffect(() => {
+    localStorage.setItem("aurora-config", JSON.stringify(config));
+  }, [config]);
 
   const [inputPrompt, setInputPrompt] = useState<string>("");
   const [isThinking, setIsThinking] = useState<boolean>(false);
@@ -64,21 +79,135 @@ export default function App() {
     setInputPrompt("");
     setIsThinking(true);
 
-    const responseText = await sendOllamaChat(config.systemPrompt, updatedMessages);
+    try {
+      // 1. Discover tools from MCP servers
+      const toolMap = new Map<string, string>();
+      const tools = [];
 
-    const assistantMsg: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      role: "assistant",
-      content: responseText,
-    };
+      for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
+        try {
+          // Ensure server is started
+          await invoke("start_mcp_server", {
+            name: serverName,
+            command: serverConfig.command || "",
+            args: serverConfig.args || []
+          });
 
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === currentSessionId
-          ? { ...s, messages: [...s.messages, assistantMsg] }
-          : s
-      )
-    );
+          const listResponse = await invoke("send_mcp_request", {
+            name: serverName,
+            request: {
+              jsonrpc: "2.0",
+              id: "list_tools",
+              method: "tools/list",
+              params: {},
+            },
+          });
+
+          const result = (listResponse as any).result?.tools || [];
+          for (const tool of result) {
+            toolMap.set(tool.name, serverName);
+            tools.push({
+              type: "function",
+              function: {
+                name: tool.name,
+                description: tool.description,
+                parameters: tool.inputSchema,
+              },
+            });
+          }
+        } catch (e) {
+          console.error(`Failed to load tools from ${serverName}:`, e);
+        }
+      }
+
+      let currentMessages = [...updatedMessages];
+      let thinking = true;
+      let finalContent = "";
+
+      while (thinking) {
+        const response = await sendOllamaChat(config.systemPrompt, currentMessages, tools);
+
+        if (response.tool_calls && response.tool_calls.length > 0) {
+          const assistantMsg: ChatMessage = {
+            id: Date.now().toString(),
+            role: "assistant",
+            content: response.content,
+            tool_calls: response.tool_calls,
+          };
+          currentMessages.push(assistantMsg);
+
+          for (const toolCall of response.tool_calls) {
+            const toolName = toolCall.function.name;
+            const args = toolCall.function.arguments;
+            const serverName = toolMap.get(toolName);
+
+            if (serverName) {
+              try {
+                const toolResult = await invoke("send_mcp_request", {
+                  name: serverName,
+                  request: {
+                    jsonrpc: "2.0",
+                    id: Date.now().toString(),
+                    method: "tools/call",
+                    params: {
+                      name: toolName,
+                      arguments: JSON.parse(args),
+                    },
+                  },
+                });
+
+                currentMessages.push({
+                  id: Date.now().toString(),
+                  role: "tool",
+                  content: JSON.stringify(toolResult),
+                  tool_call_id: toolCall.id,
+                });
+              } catch (e) {
+                currentMessages.push({
+                  id: Date.now().toString(),
+                  role: "tool",
+                  content: `Error executing tool ${toolName}: ${e}`,
+                  tool_call_id: toolCall.id,
+                });
+              }
+            } else {
+              currentMessages.push({
+                id: Date.now().toString(),
+                role: "tool",
+                content: `Tool ${toolName} not found on any configured MCP server.`,
+                tool_call_id: toolCall.id,
+              });
+            }
+          }
+        } else {
+          finalContent = response.content;
+          thinking = false;
+        }
+      }
+
+      const assistantMsg: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        role: "assistant",
+        content: finalContent,
+      };
+
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId
+            ? { ...s, messages: [...currentMessages, assistantMsg] }
+            : s
+        )
+      );
+    } catch (err) {
+      console.error("Chat error:", err);
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === currentSessionId
+            ? { ...s, messages: [...updatedMessages, { id: Date.now().toString(), role: "assistant", content: `Error: ${err}` }] }
+            : s
+        )
+      );
+    }
 
     setIsThinking(false);
   };
