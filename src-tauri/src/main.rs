@@ -62,12 +62,18 @@ impl Default for ServerManager {
     }
 }
 
+#[derive(Clone, Serialize)]
+struct McpStatusEvent {
+    name: String,
+    status: ServerStatus,
+}
+
 async fn update_status<R: Runtime>(app: &tauri::AppHandle<R>, name: String, status: ServerStatus) {
     let manager = app.state::<ServerManager>();
     let mut statuses = manager.0.statuses.lock().await;
     statuses.insert(name.clone(), status.clone());
 
-    let _ = app.emit("mcp-status-changed", (name, status));
+    let _ = app.emit("mcp-status-changed", McpStatusEvent { name, status });
 }
 
 #[tauri::command]
