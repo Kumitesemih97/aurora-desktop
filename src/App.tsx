@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 import { Sidebar } from "./components/Sidebar";
 import { ChatCanvas } from "./components/ChatCanvas";
 import { SettingsView } from "./components/SettingsView";
-import { ChatSession, ChatMessage, AppConfig } from "./types";
+import { ChatSession, ChatMessage, AppConfig, ServerStatus } from "./types";
 import { TRANSLATIONS, DEFAULT_SYSTEM_PROMPTS, detectOSLanguage } from "./translations";
 import { sendOllamaChat } from "./services/ollama";
 
@@ -28,9 +29,43 @@ export default function App() {
     };
   });
 
+  const [mcpStatuses, setMcpStatuses] = useState<Record<string, ServerStatus>>({});
+
   React.useEffect(() => {
     localStorage.setItem("aurora-config", JSON.stringify(config));
   }, [config]);
+
+  React.useEffect(() => {
+    // Initial status sync
+    invoke<Record<string, ServerStatus>>("get_mcp_servers_status")
+      .then(setMcpStatuses)
+      .catch(console.error);
+
+    // Listen for status changes
+    const unlisten = listen<{ name: string; status: ServerStatus }>("mcp-status-changed", (event) => {
+      const { name, status } = event.payload;
+      setMcpStatuses((prev) => ({ ...prev, [name]: status }));
+    });
+
+    return () => {
+      unlisten.then((f) => f());
+    };
+  }, []);
+
+  React.useEffect(() => {
+    // Ensure configured servers are started
+    for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
+      // Start if not already connected or connecting
+      const status = mcpStatuses[name];
+      if (status !== "Connected" && status !== "Connecting") {
+        invoke("start_mcp_server", {
+          name,
+          command: serverConfig.command || serverConfig.url || "",
+          args: serverConfig.args || [],
+        }).catch(console.error);
+      }
+    }
+  }, [config, mcpStatuses]);
 
   const [inputPrompt, setInputPrompt] = useState<string>("");
   const [isThinking, setIsThinking] = useState<boolean>(false);
@@ -86,13 +121,6 @@ export default function App() {
 
       for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
         try {
-          // Ensure server is started
-          await invoke("start_mcp_server", {
-            name: serverName,
-            command: serverConfig.command || "",
-            args: serverConfig.args || []
-          });
-
           const listResponse = await invoke("send_mcp_request", {
             name: serverName,
             request: {
@@ -272,7 +300,13 @@ export default function App() {
             t={t}
           />
         ) : (
-          <SettingsView config={config} saveConfig={setConfig} darkMode={darkMode} t={t} />
+          <SettingsView
+            config={config}
+            saveConfig={setConfig}
+            darkMode={darkMode}
+            t={t}
+            mcpStatuses={mcpStatuses}
+          />
         )}
       </main>
     </div>
