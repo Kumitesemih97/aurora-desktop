@@ -7,7 +7,7 @@ use tokio::sync::{Mutex, oneshot};
 use tokio::process::{Command, Child};
 use tokio::io::{AsyncWriteExt, AsyncBufReadExt, BufReader};
 use serde::{Deserialize, Serialize};
-use tauri::{State, Emitter, Runtime};
+use tauri::{Manager, State, Emitter, Runtime};
 use futures_util::StreamExt;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -96,7 +96,7 @@ async fn start_mcp_server<R: Runtime>(
         let server_name = name.clone();
 
         tokio::spawn(async move {
-            let client = &manager_clone.0.http_client;
+            let client = &manager_clone.http_client;
             let res = client.get(&url).send().await;
 
             match res {
@@ -112,7 +112,7 @@ async fn start_mcp_server<R: Runtime>(
                                         let data = &l[6..];
                                         if let Ok(response) = serde_json::from_str::<JsonRpcResponse>(data) {
                                             let id_str = response.id.to_string();
-                                            let mut pending = manager_clone.0.pending_requests.lock().await;
+                                            let mut pending = manager_clone.pending_requests.lock().await;
                                             if let Some(tx) = pending.remove(&id_str) {
                                                 let result = serde_json::to_value(response).unwrap();
                                                 let _ = tx.send(result);
@@ -131,11 +131,11 @@ async fn start_mcp_server<R: Runtime>(
             }
         });
 
-        let mut servers = manager.0.servers.lock().await;
+        let mut servers = manager.servers.lock().await;
         servers.insert(name.clone(), McpServer {
             transport: McpTransport::Sse {
                 url: command,
-                client: manager.0.http_client.clone(),
+                client: manager.http_client.clone(),
             },
             status: ServerStatus::Connecting,
         });
@@ -153,10 +153,11 @@ async fn start_mcp_server<R: Runtime>(
             .spawn()
             .map_err(|e| {
                 let err_msg = format!("Failed to spawn MCP server: {}", e);
+                let err_msg_clone = err_msg.clone();
                 let app_c = app.clone();
                 let name_c = name.clone();
                 tokio::spawn(async move {
-                    update_status(&app_c, name_c, ServerStatus::Error(err_msg.clone())).await;
+                    update_status(&app_c, name_c, ServerStatus::Error(err_msg_clone)).await;
                 });
                 err_msg
             })?;
@@ -173,7 +174,7 @@ async fn start_mcp_server<R: Runtime>(
             while let Ok(Some(line)) = reader.next_line().await {
                 if let Ok(response) = serde_json::from_str::<JsonRpcResponse>(&line) {
                     let id_str = response.id.to_string();
-                    let mut pending = manager_clone.0.pending_requests.lock().await;
+                    let mut pending = manager_clone.pending_requests.lock().await;
                     if let Some(tx) = pending.remove(&id_str) {
                         let result = serde_json::to_value(response).unwrap();
                         let _ = tx.send(result);
@@ -185,7 +186,7 @@ async fn start_mcp_server<R: Runtime>(
 
         update_status(&app, name.clone(), ServerStatus::Connected).await;
 
-        let mut servers = manager.0.servers.lock().await;
+        let mut servers = manager.servers.lock().await;
         servers.insert(name.clone(), McpServer {
             transport: McpTransport::Stdio {
                 _process: child,
@@ -217,7 +218,7 @@ async fn stop_mcp_server<R: Runtime>(
 }
 
 #[tauri::command]
-async fn send_mcp_request<R: Runtime>(
+async fn send_mcp_request(
     name: String,
     request: serde_json::Value,
     state: State<'_, ServerManager>,
@@ -240,7 +241,7 @@ async fn send_mcp_request<R: Runtime>(
                 stdin.flush().await.map_err(|e| e.to_string())?;
             }
             McpTransport::Sse { url, client } => {
-                let res = client.post(url)
+                let res = client.post(url.as_str())
                     .json(&request)
                     .send()
                     .await
@@ -266,7 +267,7 @@ async fn send_mcp_request<R: Runtime>(
 
 fn main() {
     tauri::Builder::default()
-        .plugin(tauri-plugin-shell::init())
+        .plugin(tauri_plugin_shell::init())
         .manage(ServerManager::default())
         .invoke_handler(tauri::generate_handler![
             start_mcp_server,
