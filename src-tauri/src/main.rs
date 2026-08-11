@@ -32,6 +32,7 @@ enum McpTransport {
     },
     Sse {
         url: String,
+        post_url: Arc<Mutex<Option<String>>>,
         client: reqwest::Client,
     },
 }
@@ -95,34 +96,45 @@ async fn start_mcp_server<R: Runtime>(
     if command.starts_with("http://") || command.starts_with("https://") {
         update_status(&app, name.clone(), ServerStatus::Connecting).await;
 
-        let url = command.clone();
+        let post_url = Arc::new(Mutex::new(None));
+        let post_url_clone = post_url.clone();
+        let url_clone = command.clone();
         let manager_clone = manager.clone();
         let app_clone = app.clone();
         let server_name = name.clone();
 
         tokio::spawn(async move {
             let client = &manager_clone.http_client;
-            let res = client.get(&url).send().await;
+            let res = client.get(&url_clone).send().await;
 
             match res {
                 Ok(response) => {
                     update_status(&app_clone, server_name.clone(), ServerStatus::Connected).await;
 
                     let mut stream = response.bytes_stream();
+                    let mut current_event = "message".to_string();
                     while let Some(item) = stream.next().await {
                         if let Ok(bytes) = item {
-                            if let Ok(line) = String::from_utf8(bytes.to_vec()) {
-                                for l in line.lines() {
-                                    if l.starts_with("data: ") {
+                            if let Ok(line_content) = String::from_utf8(bytes.to_vec()) {
+                                for l in line_content.lines() {
+                                    if l.starts_with("event: ") {
+                                        current_event = l[6..].to_string();
+                                    } else if l.starts_with("data: ") {
                                         let data = &l[6..];
-                                        if let Ok(response) = serde_json::from_str::<JsonRpcResponse>(data) {
-                                            let id_str = response.id.to_string();
-                                            let mut pending = manager_clone.pending_requests.lock().await;
-                                            if let Some(tx) = pending.remove(&id_str) {
-                                                let result = serde_json::to_value(response).unwrap();
-                                                let _ = tx.send(result);
+                                        if current_event == "endpoint" {
+                                            let mut post_url_lock = post_url_clone.lock().await;
+                                            *post_url_lock = Some(data.to_string());
+                                        } else {
+                                            if let Ok(response) = serde_json::from_str::<JsonRpcResponse>(data) {
+                                                let id_str = response.id.to_string();
+                                                let mut pending = manager_clone.pending_requests.lock().await;
+                                                if let Some(tx) = pending.remove(&id_str) {
+                                                    let result = serde_json::to_value(response).unwrap();
+                                                    let _ = tx.send(result);
+                                                }
                                             }
                                         }
+                                        current_event = "message".to_string();
                                     }
                                 }
                             }
@@ -140,6 +152,7 @@ async fn start_mcp_server<R: Runtime>(
         servers.insert(name.clone(), McpServer {
             transport: McpTransport::Sse {
                 url: command,
+                post_url,
                 client: manager.http_client.clone(),
             },
         });
@@ -243,8 +256,14 @@ async fn send_mcp_request(
                 stdin.write_all(b"\n").await.map_err(|e| e.to_string())?;
                 stdin.flush().await.map_err(|e| e.to_string())?;
             }
-            McpTransport::Sse { url, client } => {
-                let res = client.post(url.as_str())
+            McpTransport::Sse { url: _, post_url, client } => {
+                let post_url_lock = post_url.lock().await;
+                let target_url = match &*post_url_lock {
+                    Some(url) => url,
+                    None => return Err("MCP SSE server not yet fully connected (waiting for endpoint)".to_string()),
+                };
+
+                let res = client.post(target_url.as_str())
                     .json(&request)
                     .send()
                     .await
