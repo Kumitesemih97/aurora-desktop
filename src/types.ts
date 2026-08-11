@@ -1,3 +1,9 @@
+export type ServerStatus =
+  | "Disconnected"
+  | "Connecting"
+  | "Connected"
+  | { status: "Error"; message: string };
+
 export interface MCPServerConfig {
   type: "stdio" | "sse";
   command?: string;
