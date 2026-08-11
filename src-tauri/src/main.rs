@@ -38,7 +38,6 @@ enum McpTransport {
 
 struct McpServer {
     transport: McpTransport,
-    status: ServerStatus,
 }
 
 struct ServerManagerInner {
@@ -106,7 +105,7 @@ async fn start_mcp_server<R: Runtime>(
             let res = client.get(&url).send().await;
 
             match res {
-                Ok(mut response) => {
+                Ok(response) => {
                     update_status(&app_clone, server_name.clone(), ServerStatus::Connected).await;
 
                     let mut stream = response.bytes_stream();
@@ -143,7 +142,6 @@ async fn start_mcp_server<R: Runtime>(
                 url: command,
                 client: manager.http_client.clone(),
             },
-            status: ServerStatus::Connecting,
         });
 
         Ok(format!("SSE Server {} starting", name))
@@ -198,7 +196,6 @@ async fn start_mcp_server<R: Runtime>(
                 _process: child,
                 stdin,
             },
-            status: ServerStatus::Connected,
         });
 
         Ok(format!("Server {} started", name))
