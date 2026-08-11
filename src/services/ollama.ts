@@ -1,5 +1,4 @@
 import { ChatMessage } from "../types";
-import { ToolCall } from "../types";
 
 const OLLAMA_HOST = "http://localhost:11434";
 const DEFAULT_MODEL = "gemma4:31b-cloud";
