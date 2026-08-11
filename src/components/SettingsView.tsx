@@ -1,14 +1,15 @@
 import React, { useState } from "react";
-import { AppConfig, MCPServerConfig } from "../types";
+import { AppConfig, MCPServerConfig, ServerStatus } from "../types";
 
 interface SettingsViewProps {
   config: AppConfig;
   saveConfig: (updated: AppConfig) => void;
   darkMode: boolean;
   t: (key: string) => string;
+  mcpStatuses: Record<string, ServerStatus>;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, darkMode, t }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, darkMode, t, mcpStatuses }) => {
   const [systemPrompt, setSystemPrompt] = useState(config.systemPrompt);
   const [serverName, setServerName] = useState("");
   const [serverType, setServerType] = useState<"stdio" | "sse">("stdio");
@@ -42,6 +43,25 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
     const updatedServers = { ...config.mcpServers };
     delete updatedServers[name];
     saveConfig({ ...config, mcpServers: updatedServers });
+  };
+
+  const getStatusIndicator = (name: string) => {
+    const status = mcpStatuses[name];
+    if (!status) return { icon: "⚪", label: "Disconnected" };
+
+    if (typeof status === "string") {
+      switch (status) {
+        case "Connected": return { icon: "🟢", label: "Connected" };
+        case "Connecting": return { icon: "🟡", label: "Connecting" };
+        case "Disconnected": return { icon: "⚪", label: "Disconnected" };
+        default: return { icon: "⚪", label: "Unknown" };
+      }
+    } else if (status && typeof status === "object" && "status" in status) {
+      if (status.status === "Error") {
+        return { icon: "🔴", label: `Error: ${status.message}` };
+      }
+    }
+    return { icon: "⚪", label: "Disconnected" };
   };
 
   return (
@@ -138,27 +158,30 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ config, saveConfig, 
           <p className="text-xs opacity-50">{t("no_mcp_servers")}</p>
         ) : (
           <div className="space-y-2">
-            {Object.entries(config.mcpServers).map(([name, s]) => (
-              <div
-                key={name}
-                className={`p-3 rounded-xl flex items-center justify-between ${
-                  darkMode ? "bg-[#1E1E1E]" : "bg-[#F5F5F7]"
-                }`}
-              >
-                <div>
-                  <div className="text-xs font-bold">🟢 {name}</div>
-                  <div className="text-[10px] opacity-60">
-                    {s.type === "sse" ? s.url : `${s.command} ${(s.args || []).join(" ")}`}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleRemoveServer(name)}
-                  className="px-2.5 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg hover:bg-red-700 transition"
+            {Object.entries(config.mcpServers).map(([name, s]) => {
+              const { icon, label } = getStatusIndicator(name);
+              return (
+                <div
+                  key={name}
+                  className={`p-3 rounded-xl flex items-center justify-between ${
+                    darkMode ? "bg-[#1E1E1E]" : "bg-[#F5F5F7]"
+                  }`}
                 >
-                  {t("btn_remove")}
-                </button>
-              </div>
-            ))}
+                  <div>
+                    <div className="text-xs font-bold">{icon} {name} <span className="font-normal opacity-60 ml-1">({label})</span></div>
+                    <div className="text-[10px] opacity-60">
+                      {s.type === "sse" ? s.url : `${s.command} ${(s.args || []).join(" ")}`}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemoveServer(name)}
+                    className="px-2.5 py-1 bg-red-600 text-white text-[10px] font-bold rounded-lg hover:bg-red-700 transition"
+                  >
+                    {t("btn_remove")}
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
