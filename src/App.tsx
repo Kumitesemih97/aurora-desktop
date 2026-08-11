@@ -15,18 +15,19 @@ export default function App() {
 
   const [config, setConfig] = useState<AppConfig>(() => {
     const saved = localStorage.getItem("aurora-config");
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error("Failed to parse saved config", e);
-      }
-    }
-    return {
+    const defaults = {
       language: detectOSLanguage(),
       systemPrompt: DEFAULT_SYSTEM_PROMPTS[detectOSLanguage()],
       mcpServers: {},
     };
+    if (saved) {
+      try {
+        return { ...defaults, ...JSON.parse(saved) };
+      } catch (e) {
+        console.error("Failed to parse saved config", e);
+      }
+    }
+    return defaults;
   });
 
   const [mcpStatuses, setMcpStatuses] = useState<Record<string, ServerStatus>>({});
