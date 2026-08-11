@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Sidebar } from "./components/Sidebar";
@@ -119,7 +119,7 @@ export default function App() {
       const toolMap = new Map<string, string>();
       const tools = [];
 
-      for (const [serverName, serverConfig] of Object.entries(config.mcpServers)) {
+      for (const [serverName, _] of Object.entries(config.mcpServers)) {
         try {
           const listResponse = await invoke("send_mcp_request", {
             name: serverName,
