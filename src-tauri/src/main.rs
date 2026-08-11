@@ -2,7 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
+use tokio::sync::Mutex;
 use tokio::process::{Command, Child};
 use tokio::io::{AsyncWriteExt, AsyncBufReadExt, BufReader};
 use serde::{Deserialize, Serialize};
@@ -62,7 +63,7 @@ async fn start_mcp_server(
         while let Ok(Some(line)) = reader.next_line().await {
             if let Ok(response) = serde_json::from_str::<JsonRpcResponse>(&line) {
                 let id_str = response.id.to_string();
-                let mut pending = manager.pending_requests.lock().unwrap();
+                let mut pending = manager.pending_requests.lock().await;
                 if let Some(tx) = pending.remove(&id_str) {
                     let result = serde_json::to_value(response).unwrap();
                     let _ = tx.send(result);
@@ -71,7 +72,7 @@ async fn start_mcp_server(
         }
     });
 
-    let mut servers = state.0.servers.lock().unwrap();
+    let mut servers = state.0.servers.lock().await;
     servers.insert(name.clone(), McpServer {
         _process: child,
         stdin,
@@ -85,7 +86,7 @@ async fn stop_mcp_server(
     name: String,
     state: State<'_, ServerManager>,
 ) -> Result<String, String> {
-    let mut servers = state.0.servers.lock().unwrap();
+    let mut servers = state.0.servers.lock().await;
     if let Some(mut server) = servers.remove(&name) {
         server._process.kill().await.map_err(|e| e.to_string())?;
         Ok(format!("Server {} stopped", name))
@@ -104,18 +105,18 @@ async fn send_mcp_request(
     let (tx, rx) = oneshot::channel();
 
     {
-        let mut pending = state.0.pending_requests.lock().unwrap();
+        let mut pending = state.0.pending_requests.lock().await;
         pending.insert(id.clone(), tx);
     }
 
-    let mut servers = state.0.servers.lock().unwrap();
+    let mut servers = state.0.servers.lock().await;
     if let Some(server) = servers.get_mut(&name) {
         let req_str = serde_json::to_string(&request).map_err(|e| e.to_string())?;
         server.stdin.write_all(req_str.as_bytes()).await.map_err(|e| e.to_string())?;
         server.stdin.write_all(b"\n").await.map_err(|e| e.to_string())?;
         server.stdin.flush().await.map_err(|e| e.to_string())?;
     } else {
-        let mut pending = state.0.pending_requests.lock().unwrap();
+        let mut pending = state.0.pending_requests.lock().await;
         pending.remove(&id);
         return Err("Server not found".to_string());
     }
